@@ -18,11 +18,27 @@ type RateLimitResponse = {
 const RATE_LIMIT = 30; // requests
 const TIME_WINDOW = 60 * 1000; // 1 minute in milliseconds
 
+// Function to clean up old entries
+function cleanupOldEntries() {
+  const now = Date.now();
+  for (const [ip, data] of ipRequests.entries()) {
+    if (now - data.timestamp > TIME_WINDOW * 2) {
+      ipRequests.delete(ip);
+    }
+  }
+}
+
+// Instead of using setInterval, we'll clean up on each request
 export async function rateLimit(
   request: NextRequest
 ): Promise<RateLimitResponse> {
-  // Get IP from request
-  const ip = request.ip || "unknown";
+  // Clean up old entries on each request
+  cleanupOldEntries();
+
+  // Get IP from request headers
+  const forwarded = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+  const ip = (forwarded ? forwarded.split(",")[0].trim() : realIp) || "unknown";
 
   // Get current timestamp
   const now = Date.now();
@@ -72,13 +88,3 @@ export async function rateLimit(
     headers: rateHeaders,
   };
 }
-
-// Clean up old entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, data] of ipRequests.entries()) {
-    if (now - data.timestamp > TIME_WINDOW * 2) {
-      ipRequests.delete(ip);
-    }
-  }
-}, TIME_WINDOW);
