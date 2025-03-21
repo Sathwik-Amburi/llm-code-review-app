@@ -47,7 +47,7 @@ export default function Home() {
 
   useEffect(() => {
     loadSnippets();
-  });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadSnippets = async () => {
     try {
